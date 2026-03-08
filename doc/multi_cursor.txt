@@ -1,0 +1,343 @@
+*multi_cursor.txt*  Multi_Cursor.nvim
+
+MULTI_CURSOR.NVIM                                        *multi_cursor*
+
+Multicursor plugin for Neovim with two backends:
+
+- legacy (default): embedded vim-visual-multi runtime
+- lua: native Lua backend
+
+==============================================================================
+SETUP                                                       *multi_cursor-setup*
+
+>lua
+require('multi_cursor').setup({
+  backend = 'lua',
+})
+<
+
+To run the embedded upstream runtime:
+>lua
+require('multi_cursor').setup({
+  backend = 'legacy',
+})
+<
+
+==============================================================================
+LEGACY MODE DOCS                                      *multi_cursor-legacy-docs*
+
+When `backend = 'legacy'` is active, the embedded `vim-visual-multi` runtime is
+used. The canonical reference for legacy behavior is the upstream help shipped
+inside this plugin under:
+
+`legacy/vim-visual-multi/doc/`
+
+Primary entrypoint:
+- `visual-multi.txt`   main manual and quick reference (`*visual-multi*`)
+
+Additional references:
+- `vm-settings.txt`        settings reference (`*vm-settings*`)
+- `vm-mappings.txt`        mappings reference (`*vm-mappings-all*`)
+- `vm-ex-commands.txt`     Ex command reference (`*vm-ex-commands*`)
+- `vm-faq.txt`             FAQ (`*vm-faq*`)
+- `vm-troubleshooting.txt` troubleshooting (`*vm-troubleshooting*`)
+- `vm-tutorial`            guided tutorial walkthrough
+
+Quick legacy index:
+- Modes: |vm-modes|, |cursor-mode|, |extend-mode|
+- Mappings: |vm-mappings|, |vm-mappings-default|, |vm-mappings-buffer|
+- Commands at cursors: |vm-run-at-cursors|
+- Registers: |vm-registers|
+- Single region mode: |vm-single-mode|
+
+Legacy quick reference defaults:
+- Find under: `<C-n>`
+- Next/prev/skip: `n` / `N` / `q`
+- Remove region: `Q`
+- Add cursors down/up: `<C-Down>` / `<C-Up>`
+- Add cursor at position: `\\`
+- Select all: `\\A`
+- Regex search: `\\/`
+- Slash motion: `g/`
+- Toggle mappings: `\\<Space>`
+- Toggle mode (cursor/extend): `<Tab>`
+
+Important legacy options (see |vm-settings|):
+- `g:VM_set_statusline` (statusline refresh mode)
+- `g:VM_silent_exit`
+- `g:VM_check_mappings`, `g:VM_force_maps`
+- `g:VM_default_mappings`, `g:VM_mouse_mappings`
+- `g:VM_leader` (string or dict with `default`/`visual`/`buffer`)
+- `g:VM_custom_remaps`, `g:VM_custom_noremaps`, `g:VM_custom_motions`
+- `g:VM_user_operators`
+- `g:VM_live_editing`, `g:VM_use_first_cursor_in_line`
+- `g:VM_single_mode_maps`, `g:VM_single_mode_auto_reset`
+- `g:VM_filesize_limit`, `g:VM_persistent_registers`
+- `g:VM_theme`, `g:VM_highlight_matches`
+
+Important legacy Ex commands (see |vm-ex-commands|):
+- Always available: `:VMDebug`, `:VMClear`, `:VMRegisters`, `:VMSearch`, `:VMLive`
+- Session-scoped: `:VMSort`, `:VMQfix`, `:VMFilterRegions`,
+  `:VMFilterLines`, `:VMRegionsToBuffer`, `:VMMassTranspose`
+- Lua `:VMSearch` parity notes:
+  - `:VMSearch[!] [pattern]` accepts range.
+  - Without `!`, selects all matches in given range (default: current line).
+  - With `!`, selects next occurrence (pattern or current `@/` register).
+
+Legacy troubleshooting starting points:
+- Use |:VMDebug| for mapping conflicts and plugin interference diagnostics.
+- Use |:VMClear| to clear leftover highlight matches after failures.
+- See |vm-compatibility| for known plugin interaction patterns.
+
+==============================================================================
+VM LEADER                                                *multi_cursor-leader*
+
+Lua backend supports |g:VM_leader| semantics.
+
+String leader:
+>vim
+let g:VM_leader = '<leader>m'
+<
+
+Lua convenience alias:
+>lua
+require('multi_cursor').setup({
+  multicursor_leader = '<leader>m',
+})
+<
+
+Per-scope dictionary:
+>vim
+let g:VM_leader = {'default': '<leader>d', 'visual': '<leader>v', 'buffer': '<leader>b'}
+<
+
+Notes:
+- `default` scope applies to default/permanent normal mappings.
+- `visual` scope applies to visual mappings.
+- `buffer` scope applies to buffer-local operational mappings.
+- Explicit mapping overrides in `mappings` or `g:VM_maps` are never rewritten.
+- `multicursorLeader` is also accepted as a camelCase alias.
+
+==============================================================================
+LUA MOTION PASSTHROUGH                               *multi_cursor-normal-keys*
+
+If your normal mode motions are remapped (example: `gh`, `gs`, `gl`), include
+those keys in `normal_keys` so multicursor normal replay recognizes them.
+
+>lua
+require('multi_cursor').setup({
+  backend = 'lua',
+  enable_normal_key_passthrough = true,
+  normal_keys = { 'h', 'j', 'k', 'l', 'gh', 'gs', 'gl' },
+})
+<
+
+==============================================================================
+DEFAULT OPTIONS                                         *multi_cursor-defaults*
+
+Core defaults:
+- `backend = 'legacy'`
+- `default_mappings = true`
+- `mouse_mappings = false`
+- `single_mode_maps = true`
+- `single_mode_auto_reset = true`
+- `check_mappings = true`
+- `force_maps = {}`
+- `user_operators = {}`
+- `quit_after_leaving_insert_mode = false`
+- `reindent_filetypes = {}`
+- `disable_syntax_in_imode = false`
+- `set_statusline = 2`
+- `silent_exit = false`
+- `show_warnings = true`
+- `verbose_commands = false`
+- `add_cursor_at_pos_no_mappings = false`
+- `filesize_limit = 0`
+- `persistent_registers = false`
+- `live_editing = true`
+- `reselect_first = false`
+- `case_setting = ''`
+- `plugins_compatibility = {}`
+- `picker = 'auto'` (`auto`, `telescope`, `snacks`, `builtin`)
+- `theme = 'helix'`
+- `leader = { default = '\\', visual = '\\', buffer = '\\' }`
+- `normal_keys = { 'h','j','k','l','w','W','b','B','e','E','ge','gE','0','^','$','%','f','F','t','T',',',';','|' }`
+- `enable_normal_key_passthrough = true`
+- `custom_noremaps = {}`
+- `custom_remaps = {}`
+- `custom_commands = {}`
+- `custom_motions = {}`
+- `highlights = { cursor = 'MultiCursorCursor', extend = 'MultiCursorExtend', mono = 'MultiCursorMono', insert = 'MultiCursorInsert' }`
+- `skip_shorter_lines = true`
+- `skip_empty_lines = false`
+- `use_first_cursor_in_line = false`
+- `smart_paste_from_multicursor = true`
+- `insert_mode = 'prompt'`
+- `legacy_runtime_path = nil`
+
+Built-in themes include:
+- `iceblue`, `ocean`, `neon`, `nord`, `paper`, `helix` (plus legacy-compatible presets)
+
+Picker backend:
+- `auto`: prefers Telescope, then Snacks picker, else builtin list.
+- `telescope`: force Telescope picker, fallback to builtin if unavailable.
+- `snacks`: force Snacks picker, fallback to builtin if unavailable.
+- `builtin`: always use builtin list picker.
+
+Regex picker:
+- `MultiCursorRegex` / `regex_search` prompts for a pattern, then opens a picker
+  with buffer matches for selection.
+- With Telescope backend, match entries include a preview window.
+
+Default mapping table is large; see:
+- `lua/multi_cursor/config.lua` (`M.defaults.mappings`)
+
+==============================================================================
+VM-COMPAT GLOBALS                                    *multi_cursor-vm-globals*
+
+Lua backend ingests these VM-compatible globals:
+
+- `g:VM_maps`, `g:VM_leader`
+- `g:VM_default_mappings`, `g:VM_mouse_mappings`
+- `g:VM_single_mode_maps`, `g:VM_single_mode_auto_reset`
+- `g:VM_check_mappings`, `g:VM_force_maps`
+- `g:VM_custom_noremaps`, `g:VM_custom_remaps`, `g:VM_custom_commands`,
+  `g:VM_custom_motions`
+- `g:VM_user_operators`
+- `g:VM_use_first_cursor_in_line`, `g:VM_skip_empty_lines`,
+  `g:VM_skip_shorter_lines`
+- `g:VM_insert_special_keys`
+- `g:VM_set_statusline`, `g:VM_silent_exit`, `g:VM_show_warnings`,
+  `g:VM_verbose_commands`
+- `g:VM_add_cursor_at_pos_no_mappings`, `g:VM_filesize_limit`,
+  `g:VM_persistent_registers`, `g:VM_live_editing`
+- `g:VM_reselect_first`, `g:VM_case_setting`
+- `g:VM_plugins_compatibilty` and `g:VM_plugins_compatibility`
+
+==============================================================================
+COMMANDS                                                 *multi_cursor-commands*
+
+Lua backend exposes `:MultiCursor*` commands, including:
+
+- Search/select: `MultiCursorFindUnder`, `MultiCursorFindNext`,
+  `MultiCursorFindPrev`, `MultiCursorSelectAll`, `MultiCursorRegex`,
+  `MultiCursorRegexAll`, `MultiCursorVisualRegex`
+- Cursor control: `MultiCursorAddCursorAtPos`, `MultiCursorAddCursorUp`,
+  `MultiCursorAddCursorDown`, `MultiCursorSkip`, `MultiCursorRemove`,
+  `MultiCursorClear`
+- Editing/tools: `MultiCursorDelete`, `MultiCursorChange`,
+  `MultiCursorOperator`, `MultiCursorYank`, `MultiCursorPaste`,
+  `MultiCursorAlign`, `MultiCursorTranspose`, `MultiCursorDuplicate`,
+  `MultiCursorFilter`, `MultiCursorTransform`, `MultiCursorCase`,
+  `MultiCursorNumbersAppend`, `MultiCursorNumbersPrepend`
+- Execute commands/macros: `MultiCursorRunNormal`, `MultiCursorRunVisual`,
+  `MultiCursorEx`, `MultiCursorMacro`
+
+==============================================================================
+MODES                                                      *multi_cursor-modes*
+
+Lua backend mode transitions follow this model:
+
+- `i` / `a` / `I` / `A` in multicursor normal => multicursor insert mode
+- `<Esc>` in multicursor insert => multicursor normal (keeps cursors)
+- clear mapping / `:MultiCursorClear` => exits multicursor completely
+- toggle mode mapping (default `<Tab>`) switches cursor/extend mode
+
+`cursor` mode:
+- each cursor is a point
+- operator+motion (`yiw`, `diw`, `ciw`, etc.) first derives selections
+
+`extend` mode:
+- each cursor has an anchor + active endpoint
+- `y` / `d` / `c` all use the same exact selected range contract
+- `d` / `c` yank exact selected text first, then delete/change
+
+Search-seed workflow (Lua backend):
+
+- `seed_word_search` (default `\<leader>*`, with `multicursor_leader='<leader>m'` => `<leader>m*`)
+  seeds pattern from word under cursor and starts multicursor session
+- then `find_next` / `find_prev` (defaults `n` / `N`) add cursors at next/prev matches
+- `skip` (default `q`) skips the current selection and advances to the next match
+
+==============================================================================
+REGISTERS                                              *multi_cursor-registers*
+
+Lua backend register behavior:
+
+- Uses current register (`"` by default, `vim.v.register`)
+- Supports named registers (`"a` ... `"z`)
+- Supports append registers (`"A` appends into `"a`)
+- Supports black-hole register (`"_"`)
+- `d`/`c` with unnamed register rotate delete registers (`"1` ... `"9`)
+- Mirrors multicursor yanks into Vim registers via `setreg()`
+
+Paste source priority:
+- multicursor internal register
+- fallback to native Vim register contents
+
+Note:
+- Numbered register behavior follows common Vim expectations for unnamed
+  delete/change operations in Lua backend.
+
+==============================================================================
+COUNTS                                                    *multi_cursor-counts*
+
+Lua backend count behavior (current status):
+
+Supported:
+- Operator prompts with motions in active multicursor mode (`2dw`, `3yw`, etc.)
+- Paste mappings in active multicursor mode (`2p`, `2P`)
+- Numeric commands already designed for counts (numbers/regex/goto-region flows)
+
+Intentional limits (current):
+- Not every command-specific motion flow has bespoke count parity with legacy VM.
+- If a command path has no explicit count contract, behavior follows its mapped
+  action once.
+
+Recommendation:
+- Prefer explicit count-enabled mappings/commands above.
+- For advanced flows, verify behavior with `:checkhealth multi_cursor` and the
+  parity tests listed in `tests/test_backend_parity_subset.py`.
+
+==============================================================================
+CASE ADJUSTMENT                                    *multi_cursor-case-adjust*
+
+Case tools in Lua backend:
+
+- `case_conversion` mapping / `M.case_convert(mode)` applies to selected text.
+- In cursor mode, case conversion first derives `iw` selections at each cursor.
+- In extend mode, conversion applies to current selected regions.
+- After conversion, mode returns to `cursor` (legacy-compatible behavior).
+
+Register/selection interaction:
+
+- Case conversion does not intentionally write to delete/yank registers.
+- Selection probing used to derive cursor-mode text objects restores unnamed
+  register content after probing.
+
+Case-setting cycle:
+
+- `case_setting` mapping / `M.case_setting_cycle()` rotates:
+  `smart` -> `sensitive` -> `ignore` -> `smart`.
+- Startup `case_setting` option still controls search-case defaults when
+  multicursor session starts.
+
+==============================================================================
+HEALTH AND HELP                                         *multi_cursor-health*
+
+Diagnostics:
+- `:checkhealth multi_cursor`
+- `:MultiCursorMappingConflicts` (shows mapping conflicts recorded at setup)
+
+Help entrypoints:
+- Lua backend: `:h multi_cursor`
+- Legacy backend docs: `:h visual-multi`
+
+If help tags are missing, run:
+- `:helptags ALL`
+
+Note:
+- Multi_Cursor.nvim now attempts to generate its own help tags during setup for
+  `doc/` and embedded legacy docs, so manual `:helptags ALL` is usually not needed.
+
+==============================================================================

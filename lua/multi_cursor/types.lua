@@ -1,0 +1,163 @@
+---@meta
+
+---@alias MultiCursorMode 'cursor'|'extend'
+---@alias MultiCursorPickerBackend 'auto'|'telescope'|'snacks'|'builtin'
+
+---@class MultiCursorCursorMark
+---@field id integer
+---@field anchor_id integer
+---@field user_id integer
+
+---@class MultiCursorCursorPos
+---@field row integer
+---@field col integer
+---@field arow integer
+---@field acol integer
+
+---@class MultiCursorRegister
+---@field items string[]
+---@field kind string
+
+---@class MultiCursorState
+---@field bufnr integer
+---@field mode string
+---@field single_region boolean
+---@field multiline boolean
+---@field direction integer
+---@field nav_direction integer
+---@field current integer
+---@field search string[]
+---@field cursors MultiCursorCursorMark[]
+---@field enabled boolean
+---@field maps_enabled boolean
+---@field next_id integer
+---@field last_cursors MultiCursorCursorPos[]
+---@field last_normal string|nil
+---@field last_dot table|nil
+---@field last_visual string|nil
+---@field last_ex string|nil
+---@field insert_active boolean
+---@field insert_pending table|nil
+---@field pending_register string|nil
+---@field insert_single_entry boolean
+---@field insert_prev_synmaxcol integer|nil
+---@field replace_mode boolean
+---@field extend_manual boolean
+---@field statusline_prev string|nil
+---@field statusline_initialized boolean
+---@field old_smartcase boolean|nil
+---@field old_ignorecase boolean|nil
+---@field disabled_plugins string[]
+
+---@class MultiCursorLeaderConfig
+---@field default string
+---@field visual string
+---@field buffer string
+
+---@class MultiCursorHighlightConfig
+---@field cursor string
+---@field extend string
+---@field mono string
+---@field insert string
+
+---@class MultiCursorCompatRule
+---@field test string|fun():boolean
+---@field disable string
+---@field enable string
+
+---@alias MultiCursorWordStartTuple { [1]: integer, [2]: integer, [3]: string }
+---@alias MultiCursorPosTuple { [1]: integer, [2]: integer }
+
+---@class MultiCursorConfigValues
+---@field backend string
+---@field default_mappings boolean
+---@field use_visual_mode boolean
+---@field mouse_mappings boolean
+---@field single_mode_maps boolean|table
+---@field single_mode_auto_reset boolean
+---@field check_mappings boolean
+---@field force_maps string[]
+---@field user_operators string[]
+---@field quit_after_leaving_insert_mode boolean
+---@field reindent_filetypes string[]
+---@field disable_syntax_in_imode boolean
+---@field set_statusline integer
+---@field silent_exit boolean
+---@field show_warnings boolean
+---@field verbose_commands boolean
+---@field recursive_operations_at_cursors boolean
+---@field add_cursor_at_pos_no_mappings boolean
+---@field filesize_limit integer
+---@field persistent_registers boolean
+---@field live_editing boolean
+---@field reselect_first boolean
+---@field case_setting string
+---@field plugins_compatibility table<string, MultiCursorCompatRule>
+---@field picker MultiCursorPickerBackend|string
+---@field theme string
+---@field highlight_matches string
+---@field mappings table<string, string|string[]>
+---@field normal_keys string[]
+---@field enable_normal_key_passthrough boolean
+---@field custom_noremaps table<string, string>
+---@field custom_remaps table<string, string>
+---@field custom_commands table<string, string>
+---@field custom_motions table<string, string>
+---@field highlights MultiCursorHighlightConfig
+---@field skip_shorter_lines boolean
+---@field skip_empty_lines boolean
+---@field use_first_cursor_in_line boolean
+---@field smart_paste_from_multicursor boolean
+---@field insert_mode string
+---@field legacy_runtime_path string|nil
+---@field leader MultiCursorLeaderConfig
+
+---@class MultiCursorOpts
+---@field backend? string
+---@field default_mappings? boolean
+---@field use_visual_mode? boolean
+---@field mouse_mappings? boolean
+---@field single_mode_maps? boolean|table
+---@field single_mode_auto_reset? boolean
+---@field check_mappings? boolean
+---@field force_maps? string[]
+---@field user_operators? string[]
+---@field quit_after_leaving_insert_mode? boolean
+---@field reindent_filetypes? string[]
+---@field disable_syntax_in_imode? boolean
+---@field set_statusline? integer
+---@field silent_exit? boolean
+---@field show_warnings? boolean
+---@field verbose_commands? boolean
+---@field recursive_operations_at_cursors? boolean
+---@field add_cursor_at_pos_no_mappings? boolean
+---@field filesize_limit? integer
+---@field persistent_registers? boolean
+---@field live_editing? boolean
+---@field reselect_first? boolean
+---@field case_setting? string
+---@field plugins_compatibility? table<string, MultiCursorCompatRule>
+---@field picker? MultiCursorPickerBackend|string
+---@field theme? string
+---@field highlight_matches? string
+---@field mappings? table<string, string|string[]>
+---@field vm_maps? table<string, string>
+---@field normal_keys? string[]
+---@field enable_normal_key_passthrough? boolean
+---@field custom_noremaps? table<string, string>
+---@field custom_remaps? table<string, string>
+---@field custom_commands? table<string, string>
+---@field custom_motions? table<string, string>
+---@field highlights? MultiCursorHighlightConfig
+---@field skip_shorter_lines? boolean
+---@field skip_empty_lines? boolean
+---@field use_first_cursor_in_line? boolean
+---@field smart_paste_from_multicursor? boolean
+---@field insert_mode? string
+---@field legacy_runtime_path? string
+---@field leader? string|MultiCursorLeaderConfig
+---@field vm_leader? string|MultiCursorLeaderConfig
+---@field multicursor_leader? string|MultiCursorLeaderConfig
+---@field multicursorLeader? string|MultiCursorLeaderConfig
+
+return {}

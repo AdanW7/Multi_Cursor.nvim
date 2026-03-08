@@ -1,0 +1,14 @@
+multi_cursor	multi_cursor.txt	/*multi_cursor*
+multi_cursor-case-adjust	multi_cursor.txt	/*multi_cursor-case-adjust*
+multi_cursor-commands	multi_cursor.txt	/*multi_cursor-commands*
+multi_cursor-counts	multi_cursor.txt	/*multi_cursor-counts*
+multi_cursor-defaults	multi_cursor.txt	/*multi_cursor-defaults*
+multi_cursor-health	multi_cursor.txt	/*multi_cursor-health*
+multi_cursor-leader	multi_cursor.txt	/*multi_cursor-leader*
+multi_cursor-legacy-docs	multi_cursor.txt	/*multi_cursor-legacy-docs*
+multi_cursor-modes	multi_cursor.txt	/*multi_cursor-modes*
+multi_cursor-normal-keys	multi_cursor.txt	/*multi_cursor-normal-keys*
+multi_cursor-registers	multi_cursor.txt	/*multi_cursor-registers*
+multi_cursor-setup	multi_cursor.txt	/*multi_cursor-setup*
+multi_cursor-vm-globals	multi_cursor.txt	/*multi_cursor-vm-globals*
+multi_cursor.txt	multi_cursor.txt	/*multi_cursor.txt*

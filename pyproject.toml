@@ -1,0 +1,32 @@
+[project]
+name = "multi-cursor-nvim-tests"
+version = "0.1.0"
+description = "Test harness for Multi_Cursor.nvim"
+readme = "tests/README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pytest>=8.4.1",
+  "pyrefly>=0.18.0",
+  "ruff>=0.12.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["legacy/vim-visual-multi"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B","W"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pyrefly]
+python-version = "3.11"
+ignore-missing-imports = ["vim"]
