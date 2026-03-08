@@ -37,9 +37,34 @@ function M.word_pattern()
   return [[\V\<]] .. M.escape_literal(w) .. [[\>]]
 end
 
+---@return string|nil
+function M.subword_pattern()
+  local w = vim.fn.expand('<cword>')
+  if w == nil or w == '' then
+    return nil
+  end
+  return [[\V]] .. M.escape_literal(w)
+end
+
 ---@return MultiCursorWordStartTuple|nil
 function M.current_word_start()
   local pat = M.word_pattern()
+  if not pat then
+    return nil
+  end
+  local cur = win_cursor_pos()
+  return with_cursor(cur[1], cur[2], function()
+    local pos = vim.fn.searchpos(pat, 'cnW')
+    if pos[1] == 0 then
+      return nil
+    end
+    return { pos[1] - 1, pos[2] - 1, pat }
+  end)
+end
+
+---@return MultiCursorWordStartTuple|nil
+function M.current_subword_start()
+  local pat = M.subword_pattern()
   if not pat then
     return nil
   end

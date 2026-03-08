@@ -2,7 +2,7 @@ local config = require('multi_cursor.config')
 
 ---@class MultiCursorPickerModule
 ---@field select fun(items: {id:string,label:string,aliases:string[]|nil}[], opts: table|nil, on_choice: fun(item:table|nil)|nil): boolean
----@field select_matches fun(bufnr:integer, pat:string, matches:table[], on_choice:fun(match:table|nil)|nil): boolean
+---@field select_matches fun(bufnr:integer, pat:string, matches:table[], on_choice:fun(match:table|nil, filtered:table[]|nil)|nil): boolean
 ---@field backend fun(): string
 local M = {}
 
@@ -172,7 +172,7 @@ end
 ---@param bufnr integer
 ---@param pat string
 ---@param matches table[]
----@param on_choice fun(match:table|nil)|nil
+---@param on_choice fun(match:table|nil, filtered:table[]|nil)|nil
 ---@return boolean
 local function builtin_select_matches(bufnr, pat, matches, on_choice)
   local lines = { string.format('MultiCursor regex: %s', pat) }
@@ -184,20 +184,40 @@ local function builtin_select_matches(bufnr, pat, matches, on_choice)
   local idx = tonumber(vim.fn.inputlist(lines))
   if idx == nil or idx <= 0 or idx > #matches then
     if on_choice then
-      on_choice(nil)
+      on_choice(nil, nil)
     end
     return false
   end
   if on_choice then
-    on_choice(matches[idx])
+    on_choice(matches[idx], { matches[idx] })
   end
   return true
+end
+
+---@param prompt_bufnr integer
+---@return table[]
+local function telescope_filtered_values(prompt_bufnr)
+  local ok_s, action_state = pcall(require, 'telescope.actions.state')
+  if not ok_s then
+    return {}
+  end
+  local current = action_state.get_current_picker(prompt_bufnr)
+  if not current or not current.manager or type(current.manager.iter) ~= 'function' then
+    return {}
+  end
+  local out = {}
+  for entry in current.manager:iter() do
+    if entry and entry.value then
+      table.insert(out, entry.value)
+    end
+  end
+  return out
 end
 
 ---@param bufnr integer
 ---@param pat string
 ---@param matches table[]
----@param on_choice fun(match:table|nil)|nil
+---@param on_choice fun(match:table|nil, filtered:table[]|nil)|nil
 ---@return boolean
 local function telescope_select_matches(bufnr, pat, matches, on_choice)
   local ok_t, _ = get_telescope()
@@ -214,10 +234,10 @@ local function telescope_select_matches(bufnr, pat, matches, on_choice)
     return false
   end
 
-  local picker = pickers.new({}, {
-    prompt_title = string.format('MultiCursor Regex: %s', pat),
-    finder = finders.new_table({
-      results = matches,
+  local items = vim.deepcopy(matches)
+  local function build_finder()
+    return finders.new_table({
+      results = items,
       entry_maker = function(m)
         local txt = line_text(bufnr, m.row)
         return {
@@ -226,7 +246,12 @@ local function telescope_select_matches(bufnr, pat, matches, on_choice)
           ordinal = string.format('%d %d %s', m.row + 1, m.col + 1, txt),
         }
       end,
-    }),
+    })
+  end
+
+  local picker = pickers.new({}, {
+    prompt_title = string.format('MultiCursor Regex: %s', pat),
+    finder = build_finder(),
     previewer = previewers.new_buffer_previewer({
       title = 'Match Preview',
       define_preview = function(self, entry, _)
@@ -244,14 +269,36 @@ local function telescope_select_matches(bufnr, pat, matches, on_choice)
       end,
     }),
     sorter = conf.values.generic_sorter({}),
-    attach_mappings = function(prompt_bufnr)
+    attach_mappings = function(prompt_bufnr, map)
       actions.select_default:replace(function()
         local entry = action_state.get_selected_entry()
+        local filtered = telescope_filtered_values(prompt_bufnr)
         actions.close(prompt_bufnr)
         if on_choice then
-          on_choice(entry and entry.value or nil)
+          on_choice(entry and entry.value or nil, filtered)
         end
       end)
+      local function refresh()
+        local current = action_state.get_current_picker(prompt_bufnr)
+        if current then
+          current:refresh(build_finder(), { reset_prompt = false })
+        end
+      end
+      local function delete_selected()
+        local entry = action_state.get_selected_entry()
+        if not entry or not entry.value then
+          return
+        end
+        for i, m in ipairs(items) do
+          if m.row == entry.value.row and m.col == entry.value.col then
+            table.remove(items, i)
+            break
+          end
+        end
+        refresh()
+      end
+      map('i', '<C-d>', delete_selected)
+      map('n', 'd', delete_selected)
       return true
     end,
   })
@@ -262,7 +309,7 @@ end
 ---@param bufnr integer
 ---@param pat string
 ---@param matches table[]
----@param on_choice fun(match:table|nil)|nil
+---@param on_choice fun(match:table|nil, filtered:table[]|nil)|nil
 ---@return boolean
 local function snacks_select_matches(bufnr, pat, matches, on_choice)
   local ok_s, picker = get_snacks_picker()
@@ -281,7 +328,7 @@ end
 ---@param bufnr integer
 ---@param pat string
 ---@param matches table[]
----@param on_choice fun(match:table|nil)|nil
+---@param on_choice fun(match:table|nil, filtered:table[]|nil)|nil
 ---@return boolean
 function M.select_matches(bufnr, pat, matches, on_choice)
   local b = M.backend()

@@ -747,6 +747,51 @@ class TestLuaTools(NvimCase):
         self.assertEqual(result["total"], 2)
         self.assertNotEqual(result["search"], "")
 
+    def test_find_subword_under_select_all_matches_substrings(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo foobar', 'barfoo foo' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            a.find_subword_under()
+            a.select_all()
+            local st = s.current()
+            return { total = #st.cursors }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["total"], 4)
+
+    def test_regex_picker_applies_only_filtered_results(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo', 'foo', 'foo', 'foo' })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            local p = require('multi_cursor.picker')
+            local old = p.select_matches
+            p.select_matches = function(_, _, matches, on_choice)
+              on_choice(matches[2], { matches[2], matches[4] })
+              return true
+            end
+            a.find_by_regex('foo', { select_all = true, force_picker = true })
+            p.select_matches = old
+            local st = s.current()
+            local rows = {}
+            for i = 1, #st.cursors do
+              local cp = s.cursor_pos(st, i)
+              rows[#rows + 1] = cp and cp.row or -1
+            end
+            table.sort(rows)
+            return { total = #st.cursors, rows = rows, current = st.current }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(result["rows"], [1, 3])
+        self.assertIn(result["current"], [1, 2])
+
     def test_seed_word_search_leader_mapping_exists_with_desc(self):
         result = self.run_case(
             """
@@ -1711,3 +1756,43 @@ class TestLuaTools(NvimCase):
             setup_opts="{ backend = 'lua' }",
         )
         self.assertEqual(result["lines"], ["HELLO world", "NEXT item"])
+
+    def test_case_conversion_ignores_single_region_scope(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo one', 'bar two' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            a.add_cursor_vertical(1, 1)
+            local st = s.current()
+            st.single_region = true
+            st.current = 2
+            a.case_conversion_menu('upper')
+            return {
+              lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+              single = st.single_region,
+            }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["lines"], ["FOO one", "BAR two"])
+        self.assertTrue(result["single"])
+
+    def test_case_setting_cycle_emits_feedback(self):
+        result = self.run_case(
+            """
+            local a = require('multi_cursor.actions')
+            local msg = ''
+            local old_notify = vim.notify
+            vim.notify = function(m, _, _)
+              msg = tostring(m or '')
+            end
+            local mode = a.case_setting_cycle()
+            vim.notify = old_notify
+            return { mode = mode, msg = msg }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertIn(result["mode"], ["smart", "ignore", "sensitive"])
+        self.assertIn("case setting", result["msg"].lower())

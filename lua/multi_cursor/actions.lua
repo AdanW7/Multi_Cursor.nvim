@@ -386,6 +386,30 @@ function M.find_under()
   finalize(state)
 end
 
+---@return nil
+function M.find_subword_under()
+  local state = state_mod.current()
+  local found = search.current_subword_start()
+  if not found then
+    return
+  end
+
+  local row, col, pat = found[1], found[2], found[3]
+  if #state.search == 0 then
+    state.search = { pat }
+  end
+  clear_native_search_highlight()
+
+  local already = state_mod.exists_at(state, row, col)
+  if already then
+    state.current = already
+    return M.find_next(false)
+  end
+
+  state_mod.add_cursor(state, row, col, {})
+  finalize(state)
+end
+
 ---@return boolean
 function M.find_under_visual()
   local state = state_mod.current()
@@ -936,7 +960,7 @@ function M.goto_regex(regex, remove, count)
 end
 
 ---@param pat string|nil
----@param opts { select_all?: boolean }|nil
+---@param opts { select_all?: boolean, force_picker?: boolean }|nil
 ---@return boolean
 function M.find_by_regex(pat, opts)
   opts = opts or {}
@@ -958,15 +982,20 @@ function M.find_by_regex(pat, opts)
     return false
   end
 
-  local interactive_picker = prompted and (config.values.picker or 'auto') ~= 'none'
+  local interactive_picker = (prompted or opts.force_picker == true)
+    and (config.values.picker or 'auto') ~= 'none'
   local select_many = opts.select_all == true or interactive_picker
 
-  local function apply_choice(chosen)
+  local function apply_choice(chosen, visible)
     if select_many then
+      local source = matches
+      if type(visible) == 'table' and #visible > 0 then
+        source = visible
+      end
       if #state.cursors > 0 then
         state_mod.clear(state)
       end
-      for _, m in ipairs(matches) do
+      for _, m in ipairs(source) do
         state_mod.add_cursor(state, m.row, m.col, {})
       end
       if #state.cursors > 0 then
@@ -2443,6 +2472,8 @@ end
 function M.case_convert(mode)
   local state = state_mod.current()
   ensure_started(state)
+  local single_region_before = state.single_region
+  state.single_region = false
   if state.mode ~= 'extend' then
     M.select_operator_with_motion('iw')
   end
@@ -2521,6 +2552,7 @@ function M.case_convert(mode)
   end
   state.mode = 'cursor'
   state.extend_manual = false
+  state.single_region = single_region_before
   finalize(state)
 end
 
@@ -2737,18 +2769,21 @@ end
 
 ---@return 'smart'|'sensitive'|'ignore'
 function M.case_setting_cycle()
+  local mode
   if vim.o.smartcase then
     vim.o.smartcase = false
     vim.o.ignorecase = false
-    return 'sensitive'
-  end
-  if not vim.o.ignorecase then
+    mode = 'sensitive'
+  elseif not vim.o.ignorecase then
     vim.o.ignorecase = true
-    return 'ignore'
+    mode = 'ignore'
+  else
+    vim.o.smartcase = true
+    vim.o.ignorecase = true
+    mode = 'smart'
   end
-  vim.o.smartcase = true
-  vim.o.ignorecase = true
-  return 'smart'
+  pcall(vim.notify, string.format('MultiCursor case setting: %s', mode), vim.log.levels.INFO)
+  return mode
 end
 
 ---@return boolean
