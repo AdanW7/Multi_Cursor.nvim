@@ -1,14 +1,14 @@
 # Multi_Cursor.nvim
 
-`Multi_Cursor.nvim` gives you two ways to use multi-cursor editing in Neovim:
+Multi-cursor editing for Neovim with two backends:
 
-- `legacy` backend: embedded `vim-visual-multi` runtime (maximum historical compatibility).
-- `lua` backend: native Lua implementation with active parity work and modern Neovim integration.
+- `lua`: native Lua implementation
+- `legacy`: embedded `vim-visual-multi` runtime
 
-If you want the most predictable behavior today, use `legacy`.
-If you want native Lua behavior and the current development target, use `lua`.
+Use `lua` for native integration and current development.
+Use `legacy` if you want behavior closest to upstream `vim-visual-multi`.
 
-## Install (lazy.nvim)
+## Install
 
 ```lua
 return {
@@ -25,34 +25,28 @@ require('multi_cursor').setup({
 })
 ```
 
-## Recommended Human-First Config (Lua Backend)
-
-This is a practical config with:
-- a single `multicursor_leader`
-- explicit WhichKey-friendly descriptions
-- minimal mapping overrides
-- native insert mode
-- optional picker integration (`telescope`/`snacks`/builtin)
+## Example lazy.nvim Config (Lua Backend)
 
 ```lua
 return {
   'AdanW7/Multi_Cursor.nvim',
   branch = 'main',
+  dependencies = {
+    { 'nvim-telescope/telescope.nvim', optional = true },
+    { 'folke/snacks.nvim', optional = true },
+  },
   opts = {
-    backend = 'lua',
-    insert_mode = 'native',
+    backend = 'lua',                  -- lua | legacy
+    picker = 'auto',                  -- auto | telescope | snacks | builtin
+    insert_mode = 'native',           -- native insert replay
+    multicursor_leader = '<leader>m', -- leader-derived default mapping prefix
 
-    -- New simplified leader option
-    multicursor_leader = '<leader>m',
+    default_mappings = true,          -- keep built-in mapping set
+    check_mappings = true,            -- detect and report conflicts
+    show_warnings = true,             -- print conflict/runtime warnings
 
-    -- Keep defaults ON so core behavior (extend, operators, etc.) is complete
-    default_mappings = true,
-    check_mappings = true,
-    show_warnings = true,
-
-    use_visual_mode = true,
-    mouse_mappings = true,
-    picker = 'auto', -- 'auto' | 'telescope' | 'snacks' | 'builtin'
+    use_visual_mode = true,           -- enable visual-origin workflows
+    mouse_mappings = true,            -- enable mouse cursor/word/column actions
 
     theme = 'helix',
     highlight_matches = 'underline',
@@ -66,97 +60,94 @@ return {
 
     enable_normal_key_passthrough = true,
     normal_keys = {
-      'h',
-      'j',
-      'k',
-      'l',
-      'w',
-      'W',
-      'b',
-      'B',
-      'e',
-      'E',
-      'ge',
-      'gE',
-      '0',
-      '^',
-      '$',
-      '%',
-      'f',
-      'F',
-      't',
-      'T',
-      ',',
-      ';',
-      '|',
-      'gh',
-      'gs',
-      'gl',
+      'h', 'j', 'k', 'l',
+      'w', 'W', 'b', 'B', 'e', 'E', 'ge', 'gE',
+      '0', '^', '$', '%',
+      'f', 'F', 't', 'T', ',', ';', '|',
+      'gh', 'gs', 'gl',
     },
 
-    -- Start with minimal overrides only
     mappings = {
-      add_cursor_down = '<leader>mj',
-      add_cursor_up = '<leader>mk',
+      find_under = '<leader>mn',
+      find_subword_under = '<leader>mN',
+      select_all = '<leader>mA',
+      regex_search = '<leader>m/',
+
       add_cursor_at_pos = '<leader>ma',
-      clear = '<leader>m<Esc>',
-      -- optional explicit extend toggle (already auto-derived from multicursor_leader)
+      add_cursor_down = { '<leader>mj', 'C' }, -- multiple keys for one action
+      add_cursor_up = '<leader>mk',
+
+      search_menu = '<leader>mp',
+      tools_menu = '<leader>mt',
+      case_conversion = '<leader>mC',          -- picker-backed case conversion menu
+
       toggle_mode = '<Tab>',
+      toggle_mappings = '<leader>m<Space>',
+      clear = '<leader>m<Esc>',
     },
   },
   keys = {
     { '<leader>mn', mode = { 'n', 'x' }, desc = 'MC: Find word' },
+    { '<leader>mN', mode = { 'n', 'x' }, desc = 'MC: Find subword' },
     { '<leader>mA', mode = { 'n', 'x' }, desc = 'MC: Select all' },
     { '<leader>m/', mode = { 'n', 'x' }, desc = 'MC: Regex search' },
     { '<leader>ma', mode = { 'n' }, desc = 'MC: Add cursor at pos' },
     { '<leader>mj', mode = { 'n' }, desc = 'MC: Add cursor down' },
+    { 'C', mode = { 'n' }, desc = 'MC: Add cursor down' },
     { '<leader>mk', mode = { 'n' }, desc = 'MC: Add cursor up' },
-    { '<leader>m<Tab>', mode = { 'n' }, desc = 'MC: Toggle extend/cursor' },
+    { '<leader>mp', mode = { 'n', 'x' }, desc = 'MC: Search menu' },
+    { '<leader>mt', mode = { 'n', 'x' }, desc = 'MC: Tools menu' },
+    { '<leader>mC', mode = { 'n', 'x' }, desc = 'MC: Case conversion menu' },
+    { '<Tab>', mode = { 'n' }, desc = 'MC: Toggle extend/cursor' },
+    { '<leader>m<Space>', mode = { 'n' }, desc = 'MC: Toggle mappings' },
     { '<leader>m<Esc>', mode = { 'n' }, desc = 'MC: Clear' },
   },
 }
 ```
 
-## Core Workflow
+## Basic Workflow
 
-1. Start from a word: `find_under` (default `<C-n>`) or your custom mapping.
-2. Add next/prev matches: `n` / `N`.
-3. Skip current match: `q`.
-4. Toggle cursor/extend mode: `<Tab>`.
-5. Exit fully: clear mapping (or `:MultiCursorClear`).
+1. Add first region at cursor: `find_under`
+2. Add next/prev match: `find_next` / `find_prev`
+3. Skip/remove current region: `skip` / `remove`
+4. Switch cursor/extend mode: `toggle_mode`
+5. Exit and clear all regions: `clear`
 
-## Help and Health
+## Picker Integration
 
-- Plugin help: `:help multi_cursor`
-- Health check: `:checkhealth multi_cursor`
-- Show mapping conflicts: `:MultiCursorMappingConflicts`
+`search_menu`, `tools_menu`, and regex match selection can use picker UI:
 
-## Optional Picker Backends
+- `auto`: Telescope -> Snacks -> builtin
+- `telescope`: prefer Telescope, fallback builtin
+- `snacks`: prefer Snacks, fallback builtin
+- `builtin`: `inputlist` picker only
 
-Menu commands (`Search Menu`, `Tools Menu`) can use picker UIs.
+## Help, Health, and Conflicts
 
-- `picker = 'auto'`: prefers Telescope, then Snacks picker, else builtin.
-- `picker = 'telescope'`: force Telescope, fallback to builtin if missing.
-- `picker = 'snacks'`: force Snacks picker, fallback to builtin if missing.
-- `picker = 'builtin'`: always use builtin list picker.
+- Help: `:help multi_cursor`
+- Health: `:checkhealth multi_cursor`
+- Conflicts: `:MultiCursorMappingConflicts`
 
-Regex search picker behavior:
-- `regex_search` / `:MultiCursorRegex` now opens a match picker after entering a pattern.
-- Telescope backend shows match previews; selecting an entry applies that match (or focuses it for select-all flows).
-
-If help tags are missing, run:
+If help tags are missing:
 
 ```vim
 :helptags ALL
 ```
 
-## Legacy VM Aliases
+## Commands
 
-Lua backend also exposes compatibility commands such as:
-- `:VMClear`, `:VMDebug`, `:VMSearch`, `:VMFromSearch`, `:VMRegisters`, `:VMLive`
-- `:VMSort`, `:VMQfix`, `:VMFilterRegions`, `:VMFilterLines`, `:VMRegionsToBuffer`, `:VMMassTranspose`
+Common commands:
 
-## Notes
+- `:MultiCursorClear`
+- `:MultiCursorRegex`
+- `:MultiCursorSearchMenu`
+- `:MultiCursorToolsMenu`
+- `:MultiCursorCase [mode]` (`mode` optional, opens menu when omitted)
 
-- For full option/mapping reference, see [doc/multi_cursor.txt](doc/multi_cursor.txt).
-- Embedded upstream legacy docs are under `legacy/vim-visual-multi/doc`.
+Legacy compatibility aliases are also available (`:VM...` commands), including:
+`VMClear`, `VMSearch`, `VMFromSearch`, `VMRegisters`, `VMDebug`.
+
+## Reference
+
+- Full docs: [doc/multi_cursor.txt](doc/multi_cursor.txt)
+- Legacy docs: [legacy/vim-visual-multi/doc](legacy/vim-visual-multi/doc)

@@ -1006,6 +1006,63 @@ class TestLuaTools(NvimCase):
         self.assertEqual(result["first"], "foo")
         self.assertEqual(result["second"], "zip")
 
+    def test_keymap_ciw_enters_multicursor_insert_and_captures_all_regions(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo bar', 'zip zap' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            local k = require('multi_cursor.keymaps')
+            k.setup()
+            a.add_cursor_vertical(1, 1)
+            a.operator_with_motion('c', 'iw')
+            local st = s.current()
+            local reg = s.registers['"'] or { items = {} }
+            return {
+              active = st.insert_active,
+              mode = st.mode,
+              n = #reg.items,
+              first = reg.items[1] or '',
+              second = reg.items[2] or '',
+              lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+            }
+            """,
+            setup_opts="{ backend = 'lua', insert_mode = 'native' }",
+        )
+        self.assertTrue(result["active"])
+        self.assertEqual(result["mode"], "cursor")
+        self.assertEqual(result["n"], 2)
+        self.assertEqual(result["first"], "foo")
+        self.assertEqual(result["second"], "zip")
+        self.assertEqual(result["lines"], [" bar", " zap"])
+
+    def test_manual_extend_delete_keeps_selected_endpoint(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'abcd', 'wxyz' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            a.add_cursor_vertical(1, 1)
+            a.toggle_mode()
+            a.apply_mapped_motion('l', 'l')
+            a.apply_mapped_motion('l', 'l')
+            a.yank_exact_selection(true)
+            a.delete_regions()
+            local reg = s.registers['"'] or { items = {} }
+            return {
+              first = reg.items[1] or '',
+              second = reg.items[2] or '',
+              lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+            }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["first"], "abc")
+        self.assertEqual(result["second"], "wxy")
+        self.assertEqual(result["lines"], ["d", "z"])
+
     def test_extend_delete_yanks_before_deleting(self):
         result = self.run_case(
             """
@@ -1622,3 +1679,35 @@ class TestLuaTools(NvimCase):
         )
         self.assertEqual(result["mode"], "cursor")
         self.assertEqual(result["lines"], ["<FOO> bar", "<ZIP> zap"])
+
+    def test_swap_case_in_extend_mode_toggles_full_selection(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'abc', 'xyz' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local k = require('multi_cursor.keymaps')
+            k.setup()
+            a.add_cursor_vertical(1, 1)
+            a.toggle_mode()
+            a.shift_selection(2)
+            vim.cmd.normal({ args = { '~' }, bang = false })
+            return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false) }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["lines"], ["ABC", "XYZ"])
+
+    def test_case_conversion_menu_choice_applies_conversion(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'hello world', 'next item' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            a.add_cursor_vertical(1, 1)
+            a.case_conversion_menu('upper')
+            return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false) }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["lines"], ["HELLO world", "NEXT item"])

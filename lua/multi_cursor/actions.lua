@@ -6,6 +6,7 @@ local picker = require('multi_cursor.picker')
 
 ---@class MultiCursorActionsModule
 local M = {}
+local run_menu
 local is_extended
 
 ---@param bufnr integer
@@ -1742,6 +1743,16 @@ function M.operator_with_motion(op, motion)
     remember_dot(state, { kind = 'operator', op = 'd', motion = motion })
     return true
   end
+  if op == 'c' and state.mode ~= 'extend' then
+    if not M.select_operator_with_motion(motion) then
+      return false
+    end
+    store_selection_yank_exact(state, { as_delete = true })
+    M.delete_regions()
+    M.begin_insert('insert')
+    remember_dot(state, nil)
+    return true
+  end
   if op == 'd' and state.mode == 'extend' then
     store_selection_yank_exact(state, { as_delete = true })
     M.delete_regions()
@@ -2513,6 +2524,119 @@ function M.case_convert(mode)
   finalize(state)
 end
 
+---@return string[]
+function M.case_conversion_items()
+  return {
+    'lower',
+    'upper',
+    'title',
+    'capitalize',
+    'camel',
+    'pascal',
+    'snake',
+    'snake_upper',
+    'dash',
+    'dot',
+    'space',
+  }
+end
+
+---@param choice string|nil
+---@return boolean
+function M.case_conversion_menu(choice)
+  local items = {
+    {
+      id = 'lower',
+      label = 'lower_case',
+      aliases = { 'l', 'lower' },
+      run = function()
+        M.case_convert('lower')
+      end,
+    },
+    {
+      id = 'upper',
+      label = 'UPPER_CASE',
+      aliases = { 'u', 'upper' },
+      run = function()
+        M.case_convert('upper')
+      end,
+    },
+    {
+      id = 'title',
+      label = 'Title Case',
+      aliases = { 't', 'title' },
+      run = function()
+        M.case_convert('title')
+      end,
+    },
+    {
+      id = 'capitalize',
+      label = 'Capitalize',
+      aliases = { 'cap', 'capitalize' },
+      run = function()
+        M.case_convert('capitalize')
+      end,
+    },
+    {
+      id = 'camel',
+      label = 'camelCase',
+      aliases = { 'cc', 'camel' },
+      run = function()
+        M.case_convert('camel')
+      end,
+    },
+    {
+      id = 'pascal',
+      label = 'PascalCase',
+      aliases = { 'pc', 'pascal' },
+      run = function()
+        M.case_convert('pascal')
+      end,
+    },
+    {
+      id = 'snake',
+      label = 'snake_case',
+      aliases = { 'sc', 'snake' },
+      run = function()
+        M.case_convert('snake')
+      end,
+    },
+    {
+      id = 'snake_upper',
+      label = 'SNAKE_UPPER',
+      aliases = { 'su', 'snake_upper', 'constant' },
+      run = function()
+        M.case_convert('snake_upper')
+      end,
+    },
+    {
+      id = 'dash',
+      label = 'dash-case',
+      aliases = { 'kebab', 'dash' },
+      run = function()
+        M.case_convert('dash')
+      end,
+    },
+    {
+      id = 'dot',
+      label = 'dot.case',
+      aliases = { 'dot' },
+      run = function()
+        M.case_convert('dot')
+      end,
+    },
+    {
+      id = 'space',
+      label = 'space case',
+      aliases = { 'space', 'words' },
+      run = function()
+        M.case_convert('space')
+      end,
+    },
+  }
+  return run_menu('case conversion', items, choice)
+end
+
 ---@return boolean
 function M.toggle_mappings()
   local state = state_mod.current()
@@ -2640,7 +2764,7 @@ end
 ---@param items {id:string,label:string,run:fun():any,aliases:string[]|nil}[]
 ---@param choice string|nil
 ---@return boolean
-local function run_menu(menu, items, choice)
+run_menu = function(menu, items, choice)
   local selected = nil
   local pick = choice
   if type(pick) == 'string' then
@@ -2806,6 +2930,7 @@ function M.tools_menu_items()
     'toggle_mode',
     'toggle_single_region',
     'toggle_multiline',
+    'case_conversion',
     'toggle_mappings',
     'show_registers',
     'case_setting',
@@ -2839,6 +2964,14 @@ function M.tools_menu(choice)
       aliases = { 'multiline', 'm' },
       run = function()
         M.toggle_multiline()
+      end,
+    },
+    {
+      id = 'case_conversion',
+      label = 'Case conversion menu',
+      aliases = { 'caseconv', 'cC', 'C' },
+      run = function()
+        M.case_conversion_menu(nil)
       end,
     },
     {

@@ -296,11 +296,15 @@ local function create_commands()
     actions.number_regions_zero(opts.count, false)
   end, { count = true })
   vim.api.nvim_create_user_command('MultiCursorCase', function(opts)
-    actions.case_convert(opts.args)
+    if opts.args ~= '' then
+      actions.case_convert(opts.args)
+      return
+    end
+    actions.case_conversion_menu(nil)
   end, {
     nargs = '?',
     complete = function()
-      return { 'lower', 'upper', 'title' }
+      return actions.case_conversion_items()
     end,
   })
   vim.api.nvim_create_user_command('MultiCursorCaseSetting', actions.case_setting_cycle, {})

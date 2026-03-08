@@ -395,7 +395,7 @@ function M.setup()
     actions.shrink_or_enlarge(false)
   end, fallback_for(m.enlarge))
   map_action(m.case_conversion, function()
-    actions.case_convert('lower')
+    actions.case_conversion_menu(nil)
   end, fallback_for(m.case_conversion))
   map_action(m.case_setting, function()
     actions.case_setting_cycle()
@@ -649,7 +649,6 @@ function M.setup()
   map_apply_normal(m.delete_char, 'x', false)
   map_apply_normal(m.delete_char_before, 'X', false)
   map_apply_normal(m.join_lines, 'J', false)
-  map_apply_normal(m.swap_case, '~', false)
   map_apply_normal(m.repeat_substitute, '&', false)
   map_apply_normal(m.delete_key, '<Del>', false)
   map_apply_normal(m.dot, '.', false)
@@ -672,8 +671,22 @@ function M.setup()
     actions.increase_or_decrease(false, true, vim.v.count1, false)
   end, fallback_for(m.alpha_decrease))
   map_apply_normal(m.comment_operator, 'gc', true)
-  map_apply_normal(m.lower_operator, 'gu', false)
-  map_apply_normal(m.upper_operator, 'gU', false)
+  map_action(m.lower_operator, function()
+    local st = state_mod.current()
+    if st.mode == 'extend' then
+      actions.run_visual('gu')
+    else
+      actions.apply_normal('gu', false)
+    end
+  end, fallback_for(m.lower_operator))
+  map_action(m.upper_operator, function()
+    local st = state_mod.current()
+    if st.mode == 'extend' then
+      actions.run_visual('gU')
+    else
+      actions.apply_normal('gU', false)
+    end
+  end, fallback_for(m.upper_operator))
   map_apply_normal(m.change_to_eol, 'C', false)
   map_action(m.replace_chars, function()
     actions.replace_chars(nil)
@@ -681,6 +694,14 @@ function M.setup()
   map_apply_normal(m.replace_mode, 'R', false)
   map_apply_normal(m.open_below, 'o', false)
   map_apply_normal(m.open_above, 'O', false)
+  map_action(m.swap_case, function()
+    local st = state_mod.current()
+    if st.mode == 'extend' then
+      actions.run_visual('~')
+    else
+      actions.apply_normal('~', false)
+    end
+  end, fallback_for(m.swap_case))
 
   if config.values.use_visual_mode then
     map_plain('x', m.visual_regex, function()
