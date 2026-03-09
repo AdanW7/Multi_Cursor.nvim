@@ -944,6 +944,46 @@ class TestLuaTools(NvimCase):
         self.assertNotEqual(result["p1"]["col"], result["p1"]["acol"])
         self.assertNotEqual(result["p2"]["col"], result["p2"]["acol"])
 
+    def test_mapped_motion_f_char_applies_per_cursor_line(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'aa=1', 'bb=2' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            a.add_cursor_vertical(1, 1)
+            vim.fn.getchar = function() return string.byte('=') end
+            a.apply_mapped_motion('f', 'f')
+            local st = s.current()
+            local p1 = s.cursor_pos(st, 1)
+            local p2 = s.cursor_pos(st, 2)
+            return { c1 = p1.col, c2 = p2.col }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["c1"], 2)
+        self.assertEqual(result["c2"], 2)
+
+    def test_mapped_motion_t_char_applies_per_cursor_line(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'aa=1', 'bb=2' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local s = require('multi_cursor.state')
+            a.add_cursor_vertical(1, 1)
+            vim.fn.getchar = function() return string.byte('=') end
+            a.apply_mapped_motion('t', 't')
+            local st = s.current()
+            local p1 = s.cursor_pos(st, 1)
+            local p2 = s.cursor_pos(st, 2)
+            return { c1 = p1.col, c2 = p2.col }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["c1"], 1)
+        self.assertEqual(result["c2"], 1)
+
     def test_extend_mode_yank_collects_all_regions(self):
         result = self.run_case(
             """
@@ -1778,6 +1818,22 @@ class TestLuaTools(NvimCase):
         )
         self.assertEqual(result["lines"], ["FOO one", "BAR two"])
         self.assertTrue(result["single"])
+
+    def test_case_conversion_menu_in_extend_mode_applies_all_regions(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo bar', 'zip zap' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            a.add_cursor_vertical(1, 1)
+            a.toggle_mode()
+            a.shift_selection(2)
+            a.case_conversion_menu('upper')
+            return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false) }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["lines"], ["FOO bar", "ZIP zap"])
 
     def test_case_setting_cycle_emits_feedback(self):
         result = self.run_case(

@@ -3972,6 +3972,16 @@ function M.apply_mapped_motion(lhs, rhs)
     rhs = lhs
   end
 
+  -- Character-find motions require a target character. Read it once and
+  -- replay the same motion at each cursor location.
+  if rhs:match('^%d*[fFtT]$') then
+    local target = getchar_char()
+    if target == nil or target == '' then
+      return false
+    end
+    rhs = rhs .. target
+  end
+
   -- Keep this path for simple RHS mappings (example: lhs->motion).
   if rhs:find('<[Cc][Mm][Dd]>') or rhs:find('<[Pp][Ll][Uu][Gg]>') then
     return M.apply_normal(lhs, true)
