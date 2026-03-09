@@ -127,7 +127,8 @@ end
 ---@return boolean
 local function can_assign(mode, lhs)
   if claimed[mode] and claimed[mode][lhs] then
-    map_conflicts[lhs] = true
+    -- Internal duplicate candidate (same mode/lhs claimed earlier by this plugin).
+    -- Skip silently to avoid reporting false-positive "conflicts" in health output.
     return false
   end
   local check = vim.b.VM_check_mappings
