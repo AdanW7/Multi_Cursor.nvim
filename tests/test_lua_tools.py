@@ -1835,6 +1835,41 @@ class TestLuaTools(NvimCase):
         )
         self.assertEqual(result["lines"], ["FOO bar", "ZIP zap"])
 
+    def test_case_convert_cursor_mode_on_symbol_column_targets_next_keyword(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+              '---@class MultiCursorCursorMark',
+              '---@field id integer',
+              '---@field anchor_id integer',
+            })
+            vim.api.nvim_win_set_cursor(0, { 1, 3 }) -- on '@'
+            local a = require('multi_cursor.actions')
+            a.add_cursor_vertical(1, 2)
+            a.case_convert('upper')
+            return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false) }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["lines"][0], "---@CLASS MultiCursorCursorMark")
+        self.assertEqual(result["lines"][1], "---@FIELD id integer")
+        self.assertEqual(result["lines"][2], "---@FIELD anchor_id integer")
+
+    def test_case_convert_extend_mode_without_selection_falls_back_to_words(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo bar', 'zip zap', 'abc def' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            a.add_cursor_vertical(1, 2)
+            a.toggle_mode() -- extend mode, but no visual width yet
+            a.case_conversion_menu('upper')
+            return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false) }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["lines"], ["FOO bar", "ZIP zap", "ABC def"])
+
     def test_case_setting_cycle_emits_feedback(self):
         result = self.run_case(
             """
@@ -1852,3 +1887,69 @@ class TestLuaTools(NvimCase):
         )
         self.assertIn(result["mode"], ["smart", "ignore", "sensitive"])
         self.assertIn("case setting", result["msg"].lower())
+
+    def test_tools_menu_picker_case_conversion_applies_all_cursors(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo one', 'bar two', 'baz three' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local p = require('multi_cursor.picker')
+            local calls = 0
+            local old_select = p.select
+            p.select = function(items, _, on_choice)
+              calls = calls + 1
+              if calls == 1 then
+                on_choice(items[4]) -- tools_menu: case_conversion
+              elseif calls == 2 then
+                on_choice(items[2]) -- case_conversion_menu: upper
+              end
+              return true
+            end
+            a.add_cursor_vertical(1, 2)
+            a.tools_menu(nil)
+            p.select = old_select
+            return {
+              calls = calls,
+              lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+            }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["calls"], 2)
+        self.assertEqual(result["lines"], ["FOO one", "BAR two", "BAZ three"])
+
+    def test_tools_menu_picker_case_conversion_applies_all_extend_regions(self):
+        result = self.run_case(
+            """
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'foo one', 'bar two', 'baz three' })
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+            local a = require('multi_cursor.actions')
+            local p = require('multi_cursor.picker')
+            local calls = 0
+            local old_select = p.select
+            p.select = function(items, _, on_choice)
+              calls = calls + 1
+              if calls == 1 then
+                on_choice(items[4]) -- tools_menu: case_conversion
+              elseif calls == 2 then
+                on_choice(items[2]) -- case_conversion_menu: upper
+              end
+              return true
+            end
+            a.add_cursor_vertical(1, 2)
+            a.toggle_mode()
+            a.shift_selection(2) -- select first word on each line
+            a.tools_menu(nil)
+            p.select = old_select
+            return {
+              calls = calls,
+              mode = require('multi_cursor.state').current().mode,
+              lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
+            }
+            """,
+            setup_opts="{ backend = 'lua' }",
+        )
+        self.assertEqual(result["calls"], 2)
+        self.assertEqual(result["mode"], "cursor")
+        self.assertEqual(result["lines"], ["FOO one", "BAR two", "BAZ three"])

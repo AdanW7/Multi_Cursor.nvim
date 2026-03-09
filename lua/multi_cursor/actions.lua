@@ -1885,10 +1885,21 @@ function M.select_operator_with_motion(motion)
       local row = math.max(1, math.min(p.row + 1, vim.api.nvim_buf_line_count(state.bufnr)))
       local col = clamp(state.bufnr, row - 1, p.col)
       vim.api.nvim_win_set_cursor(0, { row, col })
+      local before1 = vim.fn.getpos("'[")
+      local before2 = vim.fn.getpos("']")
       apply_operator_motion('y' .. resolved_motion)
       local p1 = vim.fn.getpos("'[")
       local p2 = vim.fn.getpos("']")
-      if p1[2] > 0 and p2[2] > 0 then
+      local p1r = p1[2] - 1
+      local p2r = p2[2] - 1
+      local cur_row = row - 1
+      local touched_current_row = (p1r <= cur_row and cur_row <= p2r)
+        or (p2r <= cur_row and cur_row <= p1r)
+      local marks_changed = p1[2] ~= before1[2]
+        or p1[3] ~= before1[3]
+        or p2[2] ~= before2[2]
+        or p2[3] ~= before2[3]
+      if p1[2] > 0 and p2[2] > 0 and touched_current_row and marks_changed then
         local sr, sc = p1[2] - 1, math.max(0, p1[3] - 1)
         local er, ec = p2[2] - 1, math.max(0, p2[3])
         sc = clamp(state.bufnr, sr, sc)
@@ -2467,6 +2478,34 @@ function M.number_regions_zero(start_num, append)
   return true
 end
 
+---@param line string
+---@param col integer
+---@return integer|nil, integer|nil
+local function keyword_range_on_line(line, col)
+  local n = #line
+  if n == 0 then
+    return nil, nil
+  end
+  local cur = math.max(0, math.min(col, n))
+  local idx = cur + 1
+  if idx <= n and line:sub(idx, idx):match('[%w_]') then
+    local s = idx
+    while s > 1 and line:sub(s - 1, s - 1):match('[%w_]') do
+      s = s - 1
+    end
+    local e = idx
+    while e <= n and line:sub(e, e):match('[%w_]') do
+      e = e + 1
+    end
+    return s - 1, e - 1
+  end
+  local fs, fe = line:find('[%w_]+', idx)
+  if not fs or not fe then
+    return nil, nil
+  end
+  return fs - 1, fe
+end
+
 ---@param mode string|nil
 ---@return nil
 function M.case_convert(mode)
@@ -2474,7 +2513,15 @@ function M.case_convert(mode)
   ensure_started(state)
   local single_region_before = state.single_region
   state.single_region = false
-  if state.mode ~= 'extend' then
+  local has_selection = false
+  for i = 1, #state.cursors do
+    local p = state_mod.cursor_pos(state, i)
+    if p and is_extended(p) then
+      has_selection = true
+      break
+    end
+  end
+  if state.mode ~= 'extend' or not has_selection then
     M.select_operator_with_motion('iw')
   end
   local asc = entries_for_state(state, true)
@@ -2541,13 +2588,27 @@ function M.case_convert(mode)
     end
     return t:lower()
   end
+  local function apply_keyword_fallback(e)
+    local line = line_text(state.bufnr, e.pos.row)
+    local ws, we = keyword_range_on_line(line, e.pos.col)
+    if ws == nil or we == nil then
+      return false
+    end
+    local piece = line:sub(ws + 1, we)
+    local repl = conv(piece)
+    vim.api.nvim_buf_set_text(state.bufnr, e.pos.row, ws, e.pos.row, we, { repl })
+    return true
+  end
   for i = #asc, 1, -1 do
     local e = asc[i]
     local t = conv(e.text)
     if e.selected then
       vim.api.nvim_buf_set_text(state.bufnr, e.sr, e.sc, e.er, e.ec, split_lines(t))
+      if e.text:find('[%a]') == nil then
+        apply_keyword_fallback(e)
+      end
     else
-      replace_line(state.bufnr, e.pos.row, t)
+      apply_keyword_fallback(e)
     end
   end
   state.mode = 'cursor'
