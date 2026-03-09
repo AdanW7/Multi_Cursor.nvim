@@ -1,4 +1,5 @@
 # Multi_Cursor.nvim
+## This is a sample project for personal use and multi cursor learning, **DONT USE THIS**, use original vim-visual-multi
 
 Multi-cursor editing for Neovim with two backends:
 
