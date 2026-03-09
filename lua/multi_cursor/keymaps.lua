@@ -72,17 +72,21 @@ local function mappings_enabled()
   return state.maps_enabled
 end
 
----@param lhs string|nil
+---@param lhs string|string[]|nil
 ---@return string
 local function fallback_for(lhs)
-  if type(lhs) ~= 'string' or lhs == '' then
+  local key = lhs
+  if type(lhs) == 'table' then
+    key = lhs[1]
+  end
+  if type(key) ~= 'string' or key == '' then
     return ''
   end
-  local map = vim.fn.maparg(lhs, 'n', false, true)
+  local map = vim.fn.maparg(key, 'n', false, true)
   if type(map) == 'table' and map.rhs and map.rhs ~= '' then
     return map.rhs
   end
-  return lhs
+  return key
 end
 
 ---@param keys string
@@ -149,6 +153,7 @@ end
 local function map_action(lhs, fn, fallback)
   for _, key in ipairs(lhs_list(lhs)) do
     if can_assign('n', key) then
+      local desc_fallback = (type(fallback) == 'string' and fallback ~= '') and fallback or key
       vim.keymap.set('n', key, function()
         local fb = (type(fallback) == 'string' and fallback ~= '') and fallback or key
         if vim.g.multi_cursor_bypass_maps == 1 then
@@ -160,7 +165,7 @@ local function map_action(lhs, fn, fallback)
         else
           feed(fb)
         end
-      end, { silent = true, desc = map_desc(key, fb) })
+      end, { silent = true, desc = map_desc(key, desc_fallback) })
       claimed.n[key] = true
     end
   end
@@ -172,6 +177,7 @@ end
 local function map_action_active(lhs, fn, fallback)
   for _, key in ipairs(lhs_list(lhs)) do
     if can_assign('n', key) then
+      local desc_fallback = (type(fallback) == 'string' and fallback ~= '') and fallback or key
       vim.keymap.set('n', key, function()
         local fb = (type(fallback) == 'string' and fallback ~= '') and fallback or key
         if vim.g.multi_cursor_bypass_maps == 1 then
@@ -183,7 +189,7 @@ local function map_action_active(lhs, fn, fallback)
         else
           feed(fb)
         end
-      end, { silent = true, desc = map_desc(key, fb) })
+      end, { silent = true, desc = map_desc(key, desc_fallback) })
       claimed.n[key] = true
     end
   end
@@ -195,6 +201,7 @@ end
 local function map_action_any(lhs, fn, fallback)
   for _, key in ipairs(lhs_list(lhs)) do
     if can_assign('n', key) then
+      local desc_fallback = (type(fallback) == 'string' and fallback ~= '') and fallback or key
       vim.keymap.set('n', key, function()
         local fb = (type(fallback) == 'string' and fallback ~= '') and fallback or key
         if vim.g.multi_cursor_bypass_maps == 1 then
@@ -202,7 +209,7 @@ local function map_action_any(lhs, fn, fallback)
           return
         end
         fn()
-      end, { silent = true, desc = map_desc(key, fb) })
+      end, { silent = true, desc = map_desc(key, desc_fallback) })
       claimed.n[key] = true
     end
   end
@@ -215,6 +222,7 @@ end
 local function map_action_decide(lhs, when_active, when_inactive, fallback)
   for _, key in ipairs(lhs_list(lhs)) do
     if can_assign('n', key) then
+      local desc_fallback = (type(fallback) == 'string' and fallback ~= '') and fallback or key
       vim.keymap.set('n', key, function()
         local fb = (type(fallback) == 'string' and fallback ~= '') and fallback or key
         if vim.g.multi_cursor_bypass_maps == 1 then
@@ -229,7 +237,7 @@ local function map_action_decide(lhs, when_active, when_inactive, fallback)
           return
         end
         feed(fb)
-      end, { silent = true, desc = map_desc(key, fb) })
+      end, { silent = true, desc = map_desc(key, desc_fallback) })
       claimed.n[key] = true
     end
   end
@@ -240,6 +248,7 @@ end
 local function map_motion(lhs, fallback)
   for _, key in ipairs(lhs_list(lhs)) do
     if can_assign('n', key) then
+      local desc_fallback = (type(fallback) == 'string' and fallback ~= '') and fallback or key
       vim.keymap.set('n', key, function()
         local fb = (type(fallback) == 'string' and fallback ~= '') and fallback or key
         if active() and mappings_enabled() then
@@ -249,7 +258,7 @@ local function map_motion(lhs, fallback)
         else
           feed(fb)
         end
-      end, { silent = true, desc = map_desc(key, fb) })
+      end, { silent = true, desc = map_desc(key, desc_fallback) })
       claimed.n[key] = true
     end
   end

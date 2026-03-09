@@ -839,7 +839,11 @@ function M.setup(opts)
     for name, value in pairs(opts.mappings) do
       if type(value) == 'string' or type(value) == 'table' then
         user_mapping_overrides[name] = true
-        explicit_mappings[name] = vim.deepcopy(value)
+        if type(value) == 'table' then
+          explicit_mappings[name] = vim.deepcopy(value)
+        else
+          explicit_mappings[name] = value
+        end
       end
     end
   end

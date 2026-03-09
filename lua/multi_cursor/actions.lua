@@ -2794,12 +2794,12 @@ function M.show_registers()
   return true
 end
 
----@return boolean
 ---@param menu string
----@param items {id:string,label:string,run:fun():any,aliases:string[]|nil}[]
+---@param items MultiCursorMenuItem[]
 ---@param choice string|nil
 ---@return boolean
 run_menu = function(menu, items, choice)
+  ---@type MultiCursorMenuItem|nil
   local selected = nil
   local pick = choice
   if type(pick) == 'string' then
@@ -2820,7 +2820,9 @@ run_menu = function(menu, items, choice)
           selected = item
           break
         end
-        for _, alias in ipairs(item.aliases or {}) do
+        ---@type string[]
+        local aliases = item.aliases or {}
+        for _, alias in ipairs(aliases) do
           if alias == want then
             selected = item
             break
@@ -2866,6 +2868,7 @@ end
 ---@param choice string|nil
 ---@return boolean
 function M.search_menu(choice)
+  ---@type MultiCursorMenuItem[]
   local items = {
     {
       id = 'seed_word',
@@ -2959,7 +2962,7 @@ function M.rewrite_last_search()
   return true
 end
 
----@return boolean
+---@return string[]
 function M.tools_menu_items()
   return {
     'toggle_mode',
@@ -2976,6 +2979,7 @@ end
 ---@param choice string|nil
 ---@return boolean
 function M.tools_menu(choice)
+  ---@type MultiCursorMenuItem[]
   local items = {
     {
       id = 'toggle_mode',

@@ -68,6 +68,12 @@
 ---@alias MultiCursorWordStartTuple { [1]: integer, [2]: integer, [3]: string }
 ---@alias MultiCursorPosTuple { [1]: integer, [2]: integer }
 
+---@class MultiCursorMenuItem
+---@field id string
+---@field label string
+---@field run fun()
+---@field aliases string[]|nil
+
 ---@class MultiCursorConfigValues
 ---@field backend string
 ---@field default_mappings boolean
